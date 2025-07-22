@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUBE</title>
+    <style>
+        body, html {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: #fff;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            height: 100%;
+            width: 100%;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: pointer;
+        }
+
+        .hud {
+            position: fixed;
+            z-index: 10;
+            color: #00ffff;
+            text-shadow: 0 0 8px #00ffff;
+            pointer-events: none;
+        }
+
+        #status {
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5em;
+            text-align: center;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        #scoreDisplay {
+            top: 35px;
+            left: 30px;
+            font-size: 1.1em;
+        }
+        
+        .hud-button {
+            z-index: 20;
+            background: transparent;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            line-height: 38px;
+            text-align: center;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-shadow: 0 0 8px #00ffff;
+        }
+
+        #resetButton {
+            position: fixed;
+            top: 25px;
+            right: 30px;
+        }
+
+        #musicToggleButton {
+            position: fixed;
+            top: 25px;
+            right: 80px;
+            opacity: 0.5;
+        }
+
+        #resetButton:hover, #musicToggleButton:hover, #nextRoundButton:hover, .turn-button:hover {
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 15px #00ffff;
+        }
+        
+        #nextRoundButton {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            background: transparent;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            padding: 10px 30px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: none; /* Hidden by default */
+        }
+
+        #gameSetup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 40px;
+            border-radius: 10px;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 20px #00ffff;
+            text-align: center;
+        }
+
+        #gameSetup h2 {
+            margin-top: 0;
+            color: #00ffff;
+        }
+
+        #gameSetup select, #gameSetup button {
+            background: #001111;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        #gameSetup select option {
+            background: #000;
+            color: #00ffff;
+        }
+
+        #gameSetup button:hover {
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 15px #00ffff;
+        }
+
+        #turnControls {
+            position: fixed;
+            bottom: 30px; 
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: none;
+            pointer-events: all;
+        }
+
+        .turn-button {
+            background: transparent;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            font-size: 1em;
+            padding: 10px 20px;
+            margin: 0 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-shadow: 0 0 8px #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameSetup">
+        <h2>QUBE Setup</h2>
+        <select id="difficultySelector">
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+            <option value="very_hard">Very Hard</option>
+        </select>
+        <select id="seriesSelector">
+            <option value="5">Best of 5</option>
+            <option value="10">Best of 10</option>
+        </select>
+        <button id="startGameButton">Start Game</button>
+    </div>
+    <div id="scoreDisplay" class="hud">Player: <span id="playerScore">0</span>    AI: <span id="aiScore">0</span></div>
+    <div id="status" class="hud">Loading...</div>
+    <div id="turnControls">
+        <button id="confirmMoveButton" class="turn-button">Confirm</button>
+        <button id="cancelMoveButton" class="turn-button">Cancel</button>
+    </div>
+    <button id="musicToggleButton" class="hud-button">🔇</button>
+    <button id="resetButton" class="hud-button">⟳</button>
+    <button id="nextRoundButton">Next Round</button>
+    <canvas id="gameCanvas"></canvas>
+    <audio id="gameMusic" src="audio/Void.mp3" loop></audio>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+
+        const BOARD_SIZE = 4;
+        let board = [], currentPlayer = 1, gameOver = false;
+        let gameState = 'SELECT_ROW', selectedRowInfo = null, previewIndex = -1;
+        let scene, camera, renderer, controls, boardGroup, reflectionSphere, winningLineMesh;
+        let pieceGroups = {}, cellMeshes = {}, previewPiece;
+        let player1Material, player2Material, player1PreviewMaterial, hoverMaterial;
+        let player1Geometry, player2Geometry;
+        let activeAnimations = [];
+        let cubeCamera, cubeRenderTarget;
+        let playerWins = 0, aiWins = 0;
+        let difficulty = 'easy', seriesLength = 5;
+
+        const playerScoreElem = document.getElementById('playerScore');
+        const aiScoreElem = document.getElementById('aiScore');
+        const music = document.getElementById('gameMusic');
+        const musicToggleButton = document.getElementById('musicToggleButton');
+        const gameSetupDiv = document.getElementById('gameSetup');
+        const startGameButton = document.getElementById('startGameButton');
+        const difficultySelector = document.getElementById('difficultySelector');
+        const seriesSelector = document.getElementById('seriesSelector');
+        const resetButton = document.getElementById('resetButton');
+        const nextRoundButton = document.getElementById('nextRoundButton');
+        const turnControls = document.getElementById('turnControls');
+        const confirmMoveButton = document.getElementById('confirmMoveButton');
+        const cancelMoveButton = document.getElementById('cancelMoveButton');
+
+        function initializeBoard(){
+            board=Array(BOARD_SIZE).fill(0).map(()=>Array(BOARD_SIZE).fill(0).map(()=>Array(BOARD_SIZE).fill(0)));
+            Object.values(pieceGroups).forEach(g=>{g.visible=false;g.scale.set(1,1,1);});
+            if(winningLineMesh){scene.remove(winningLineMesh);winningLineMesh.geometry.dispose();winningLineMesh.material.dispose();winningLineMesh=null;}
+            activeAnimations=[];
+            currentPlayer=1;
+            gameOver=false;
+            resetTurnState();
+            updateStatus("Your turn. Select a row to play.");
+        }
+        function placePiece(x,y,z,p){if(gameOver||z<0||board[z][y][x]!==0)return false;board[z][y][x]=p;return true;}
+        function checkLine(x,y,z,dx,dy,dz,p){const line=[];for(let i=0;i<4;i++){const cX=x+i*dx,cY=y+i*dy,cZ=z+i*dz;if(cX<0||cX>=4||cY<0||cY>=4||cZ<0||cZ>=4||board[cZ][cY][cX]!==p)return null;line.push({x:cX,y:cY,z:cZ});}return line;}
+        function checkWin(p){const D=[[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,-1,0],[1,0,1],[1,0,-1],[0,1,1],[0,1,-1],[1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1]];for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)for(const d of D){const line=checkLine(x,y,z,d[0],d[1],d[2],p);if(line)return line;}return null;}
+        function checkDraw(){return board.every(p=>p.every(r=>r.every(c=>c!==0)));}
+        
+        function findWinningMove(player) {
+            for (let z = 0; z < 4; z++) for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+                if (board[z][y][x] === 0) {
+                    board[z][y][x] = player;
+                    if (checkWin(player)) {
+                        board[z][y][x] = 0;
+                        return { x, y, z };
+                    }
+                    board[z][y][x] = 0;
+                }
+            }
+            return null;
+        }
+
+        function findFork(player) {
+            const available = [];
+            for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)if(board[z][y][x]===0)available.push({x,y,z});
+
+            for (const move of available) {
+                board[move.z][move.y][move.x] = player;
+                if (countCreatedThreats(move, player, 3) >= 2) {
+                    board[move.z][move.y][move.x] = 0;
+                    return move;
+                }
+                board[move.z][move.y][move.x] = 0;
+            }
+            return null;
+        }
+
+        function countCreatedThreats(move, player, count) {
+            let threats = 0;
+            const D = [[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,-1,0],[1,0,1],[1,0,-1],[0,1,1],[0,1,-1],[1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1]];
+            for (const d of D) {
+                for (let i = 0; i < 4; i++) {
+                    const sx = move.x - i * d[0], sy = move.y - i * d[1], sz = move.z - i * d[2];
+                    const ex = sx + 3 * d[0], ey = sy + 3 * d[1], ez = sz + 3 * d[2];
+                    if (sx<0||sy<0||sz<0||sx>3||sy>3||sz>3||ex<0||ey<0||ez<0||ex>3||ey>3||ez>3) continue;
+                    
+                    let pCount = 0, eCount = 0;
+                    for (let j = 0; j < 4; j++) {
+                        const val = board[sz + j * d[2]][sy + j * d[1]][sx + j * d[0]];
+                        if (val === player) pCount++;
+                        else if (val === 0) eCount++;
+                    }
+
+                    if (pCount === count && eCount === 4 - count) {
+                        threats++;
+                        break;
+                    }
+                }
+            }
+            return threats;
+        }
+
+        function findBestMove(){
+            let move = findWinningMove(2);
+            if (move) return move;
+            move = findWinningMove(1);
+            if (move) return move;
+
+            if (difficulty === 'very_hard') {
+                move = findFork(2); if (move) return move;
+                move = findFork(1); if (move) return move;
+            }
+            
+            if (difficulty === 'hard' || difficulty === 'very_hard') {
+                let goodMoves = [];
+                for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)if(board[z][y][x]===0){
+                    board[z][y][x]=2;
+                    if(countCreatedThreats({x,y,z}, 2, 2) > 0) goodMoves.push({x,y,z});
+                    board[z][y][x]=0;
+                }
+                if(goodMoves.length > 0) return goodMoves[Math.floor(Math.random() * goodMoves.length)];
+
+                let centerMoves = [];
+                for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)if(board[z][y][x]===0){
+                     if((x>0&&x<3)&&(y>0&&y<3)&&(z>0&&z<3)) centerMoves.push({x,y,z});
+                }
+                if(centerMoves.length > 0) return centerMoves[Math.floor(Math.random()*centerMoves.length)];
+            }
+            
+            if (difficulty === 'medium') {
+                for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)if(board[z][y][x]===0){
+                    board[z][y][x]=2;
+                    if(countCreatedThreats({x,y,z}, 2, 2) > 0){ board[z][y][x]=0; return {x,y,z}; }
+                    board[z][y][x]=0;
+                }
+            }
+            const a=[];for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)if(board[z][y][x]===0)a.push({x,y,z});return a.length>0?a[Math.floor(Math.random()*a.length)]:null;
+        }
+
+        function aiTurn(){
+            const m=findBestMove();
+            if(!m){currentPlayer=1;return;}
+            placePieceAndAnimate(m.x,m.y,m.z,2);
+            const wL=checkWin(2);
+            if(wL){
+                updateStatus("AI (Cyan) wins the round!");
+                gameOver=true;
+                aiWins++;
+                updateScores();
+                startWinAnimation(wL);
+                return;
+            }
+            if(checkDraw()){updateStatus("It's a draw!");gameOver=true;nextRoundButton.style.display='block';return;}
+            currentPlayer=1;
+            updateStatus("Your turn. Select a row to play.");
+        }
+        function updateStatus(msg){document.getElementById('status').innerHTML=msg;}
+        function updateScores() {
+            playerScoreElem.textContent = playerWins;
+            aiScoreElem.textContent = aiWins;
+            const seriesWinTarget = Math.ceil(seriesLength / 2);
+
+            if (playerWins >= seriesWinTarget) {
+                updateStatus("You win the series! Play again?");
+                gameSetupDiv.style.display = 'block';
+            } else if (aiWins >= seriesWinTarget) {
+                updateStatus("AI wins the series! Play again?");
+                gameSetupDiv.style.display = 'block';
+            } else {
+                if (gameOver) {
+                    nextRoundButton.style.display = 'block';
+                }
+            }
+        }
+
+        function createGridTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const context = canvas.getContext('2d');
+            context.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+            context.lineWidth = 2;
+            for (let i = 1; i < BOARD_SIZE; i++) {
+                const pos = i * (canvas.width / BOARD_SIZE);
+                context.beginPath(); context.moveTo(pos, 0); context.lineTo(pos, canvas.height); context.stroke();
+                context.beginPath(); context.moveTo(0, pos); context.lineTo(canvas.width, pos); context.stroke();
+            }
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function init3D() {
+            scene=new THREE.Scene();scene.background=new THREE.Color(0x000000);scene.fog=new THREE.FogExp2(0x001111,0.025);
+            camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+            renderer=new THREE.WebGLRenderer({canvas:document.getElementById('gameCanvas'),antialias:true});renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.outputEncoding=THREE.sRGBEncoding;onWindowResize();
+            controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=8;controls.maxDistance=25;
+            camera.position.set(4, 5, controls.minDistance + 1); // Set camera to minimum distance
+            
+            cubeRenderTarget=new THREE.WebGLCubeRenderTarget(256);cubeRenderTarget.texture.encoding=THREE.sRGBEncoding;cubeCamera=new THREE.CubeCamera(1,1000,cubeRenderTarget);
+            new RGBELoader().load('https://dl.polyhaven.org/asset_img/primary/neutral_photo_studio.hdr',t=>{t.mapping=THREE.EquirectangularReflectionMapping;scene.environment=t;});
+            const sphereGeo=new THREE.SphereGeometry(100,64,64);const sphereMat=new THREE.MeshStandardMaterial({envMap:cubeRenderTarget.texture,metalness:1.0,roughness:0.05,side:THREE.BackSide});reflectionSphere=new THREE.Mesh(sphereGeo,sphereMat);scene.add(reflectionSphere);
+            const rP={metalness:0.95,roughness:0.15};
+            player1Material=new THREE.MeshStandardMaterial({color:0xff0000,emissive:0xcc0000,emissiveIntensity:0.6,...rP});
+            player2Material=new THREE.MeshStandardMaterial({color:0x00ffff,emissive:0x00cccc,emissiveIntensity:0.6,...rP});
+            player1PreviewMaterial=new THREE.MeshStandardMaterial({color:0xff0000,emissive:0xff0000,emissiveIntensity:1.0,...rP, toneMapped:false});
+            hoverMaterial=new THREE.MeshStandardMaterial({color:0x00ffff,emissive:0x00ffff,emissiveIntensity:0.6,transparent:true,opacity:0.15});
+            
+            const rG=new THREE.TorusGeometry(1.2*0.35,1.2*0.1,16,32);const r1=new THREE.Mesh(rG);const r2=new THREE.Mesh(rG);r2.rotation.y=Math.PI/2;player1Geometry=new THREE.Group();player1Geometry.add(r1,r2);
+            const bG=new THREE.BoxGeometry(1.2*0.8,1.2*0.18,1.2*0.18);const c1=new THREE.Mesh(bG);const c2=new THREE.Mesh(bG);const c3=new THREE.Mesh(bG);c2.rotation.z=Math.PI/2;c3.rotation.y=Math.PI/2;player2Geometry=new THREE.Group();player2Geometry.add(c1,c2,c3);
+            boardGroup=new THREE.Group();scene.add(boardGroup);
+            const offset=(4*1.2+(4-1)*0.2)/2-1.2/2;
+            for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++){const pos={x:x*(1.2+0.2)-offset,y:y*(1.2+0.2)-offset,z:z*(1.2+0.2)-offset};const key=`${x}-${y}-${z}`;const cM=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2),hoverMaterial.clone());cM.position.set(pos.x,pos.y,pos.z);cM.userData={x,y,z};cM.visible=false;boardGroup.add(cM);cellMeshes[key]=cM;const p1=player1Geometry.clone();p1.children.forEach(c=>c.material=player1Material);const p2=player2Geometry.clone();p2.children.forEach(c=>c.material=player2Material);const pG=new THREE.Group();pG.add(p1,p2);pG.position.set(pos.x,pos.y,pos.z);pG.visible=false;boardGroup.add(pG);pieceGroups[key]=pG;}
+            previewPiece=player1Geometry.clone();previewPiece.children.forEach(c=>c.material=player1PreviewMaterial);previewPiece.visible=false;scene.add(previewPiece);
+
+            const gridTexture = createGridTexture();
+            const boxSize = (BOARD_SIZE * 1.2) + ((BOARD_SIZE - 1) * 0.2);
+            const gridGeo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+            const gridMat = new THREE.MeshBasicMaterial({ map: gridTexture, transparent: true, opacity: 0.3, side: THREE.BackSide });
+            const gridBox = new THREE.Mesh(gridGeo, gridMat);
+            boardGroup.add(gridBox);
+            animate();
+        }
+
+        function animate(time){requestAnimationFrame(animate);for(let i=activeAnimations.length-1;i>=0;i--){const anim=activeAnimations[i];if(anim.type==='scale'){anim.progress=Math.min(1,anim.progress+0.05);const s=0.1+(0.9*anim.progress);anim.mesh.scale.set(s,s,s);if(anim.progress>=1)activeAnimations.splice(i,1);}else if(anim.type==='linePulse'){anim.material.opacity=Math.sin(time*0.01)*0.45+0.55;}}if(reflectionSphere){reflectionSphere.visible=false;cubeCamera.update(renderer,scene);reflectionSphere.visible=true;}controls.update();renderer.render(scene,camera);}
+        function createWinningLine(line, player) {
+            const startPos = pieceGroups[`${line[0].x}-${line[0].y}-${line[0].z}`].position;
+            const endPos = pieceGroups[`${line[3].x}-${line[3].y}-${line[3].z}`].position;
+            const distance = startPos.distanceTo(endPos);
+            const lineGeo = new THREE.CylinderGeometry(0.15, 0.15, distance, 8);
+            const color = player === 1 ? 0xff0000 : 0x00ffff;
+            const lineMat = new THREE.MeshBasicMaterial({color:color,transparent:true,opacity:1,toneMapped:false});
+            winningLineMesh = new THREE.Mesh(lineGeo, lineMat);
+            winningLineMesh.position.copy(startPos).add(endPos).multiplyScalar(0.5);
+            const up = new THREE.Vector3(0, 1, 0);
+            const direction = new THREE.Vector3().subVectors(endPos, startPos).normalize();
+            const quaternion = new THREE.Quaternion().setFromUnitVectors(up, direction);
+            winningLineMesh.quaternion.copy(quaternion);
+            scene.add(winningLineMesh);
+            return lineMat;
+        }
+        function startPlacementAnimation(mesh){mesh.scale.set(0.1,0.1,0.1);activeAnimations.push({mesh,type:'scale',progress:0});}
+        function startWinAnimation(wL){const player=board[wL[0].z][wL[0].y][wL[0].x];const lineMaterial=createWinningLine(wL,player);activeAnimations.push({material:lineMaterial,type:'linePulse'});}
+        function placePieceAndAnimate(x,y,z,p){if(placePiece(x,y,z,p)){const pG=pieceGroups[`${x}-${y}-${z}`];pG.visible=true;pG.children[0].visible=(p===1);pG.children[1].visible=(p===2);startPlacementAnimation(pG);}}
+
+        function onWindowResize(){renderer.setSize(window.innerWidth,window.innerHeight);camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();}
+        function getIntersect(event){const mNDC={x:(event.clientX/window.innerWidth)*2-1,y:-(event.clientY/window.innerHeight)*2+1};const r=new THREE.Raycaster();r.setFromCamera(mNDC,camera);const i=r.intersectObjects(Object.values(cellMeshes), false);return i.length>0?i[0]:null;}
+        
+        function handleHover(event){
+            if(gameState!=='SELECT_ROW'||gameOver)return;
+            Object.values(cellMeshes).forEach(c=>c.visible=false);
+            const intersect=getIntersect(event);
+            if(intersect){
+                const normal = intersect.face.normal;
+                const pos = intersect.object.userData;
+                let axis;
+                if(Math.abs(normal.x) > 0.5) axis = 'x'; else if (Math.abs(normal.y) > 0.5) axis = 'y'; else axis = 'z';
+                for(let i=0; i<BOARD_SIZE; i++){
+                    let x = (axis === 'x') ? i : pos.x;
+                    let y = (axis === 'y') ? i : pos.y;
+                    let z = (axis === 'z') ? i : pos.z;
+                    if(board[z][y][x] === 0) cellMeshes[`${x}-${y}-${z}`].visible = true;
+                }
+            }
+        }
+
+        function handleClick(event){
+            if(event.button!==0||gameOver||currentPlayer!==1)return;
+            const intersect=getIntersect(event);
+            if(!intersect)return;
+            if(gameState==='SELECT_ROW'){
+                const normal = intersect.face.normal;
+                const pos = intersect.object.userData;
+                let axis;
+                if(Math.abs(normal.x) > 0.5) axis = 'x'; else if (Math.abs(normal.y) > 0.5) axis = 'y'; else axis = 'z';
+                if(axis === 'x') selectedRowInfo = { axis: 'x', y: pos.y, z: pos.z };
+                else if(axis === 'y') selectedRowInfo = { axis: 'y', x: pos.x, z: pos.z };
+                else selectedRowInfo = { axis: 'z', x: pos.x, y: pos.y };
+
+                previewIndex = findNextAvailableInRow(-1, true);
+                if(previewIndex!==-1){
+                    gameState='CHOOSE_POSITION';
+                    updatePreviewPiecePosition();
+                    updateStatus("Click to move, Confirm to place, or Cancel.");
+                    turnControls.style.display = 'block';
+                }
+            }else if(gameState==='CHOOSE_POSITION'){
+                const {x,y,z} = intersect.object.userData;
+                if(isCellInSelectedRow(x,y,z) && board[z][y][x] === 0){
+                    previewIndex = (selectedRowInfo.axis === 'x' ? x : selectedRowInfo.axis === 'y' ? y : z);
+                    updatePreviewPiecePosition();
+                }
+            }
+        }
+
+        function handleRightClick(event){event.preventDefault();if(gameOver||currentPlayer!==1||gameState!=='CHOOSE_POSITION')return;resetTurnState();}
+        
+        function handleKeyDown(event){
+            if(gameOver||currentPlayer!==1||gameState!=='CHOOSE_POSITION')return;
+            if(event.code==='Space'){event.preventDefault();previewIndex=findNextAvailableInRow(previewIndex, true);updatePreviewPiecePosition();}
+            else if(event.code==='Enter'){event.preventDefault();finalizePlayerMove();}
+            else if(event.code==='Escape'){event.preventDefault();resetTurnState();}
+        }
+
+        function finalizePlayerMove(){
+            if(!selectedRowInfo) return;
+            const { axis, ...coords } = selectedRowInfo;
+            let x, y, z;
+            if (axis === 'x') { x = previewIndex; y = coords.y; z = coords.z; }
+            else if (axis === 'y') { y = previewIndex; x = coords.x; z = coords.z; }
+            else { z = previewIndex; x = coords.x; y = coords.y; }
+
+            placePieceAndAnimate(x,y,z,1);
+            resetTurnState();
+            const wL=checkWin(1);
+            if(wL){
+                updateStatus("You win the round!");gameOver=true;playerWins++;updateScores();startWinAnimation(wL);return;
+            }
+            if(checkDraw()){updateStatus("It's a draw!");gameOver=true;nextRoundButton.style.display='block';return;}
+            currentPlayer=2;
+            updateStatus("AI (Cyan) is thinking...");
+            setTimeout(aiTurn,500);
+        }
+
+        function resetTurnState(){
+            gameState='SELECT_ROW';
+            if(previewPiece)previewPiece.visible=false;
+            Object.values(cellMeshes).forEach(c=>c.visible=false);
+            selectedRowInfo=null;previewIndex=-1;
+            turnControls.style.display = 'none';
+            if(!gameOver) updateStatus("Your turn. Select a row to play.");
+        }
+
+        function findNextAvailableInRow(startIndex, forward) {
+            if (!selectedRowInfo) return -1;
+            const { axis, ...coords } = selectedRowInfo;
+            const dir = forward ? 1 : -1;
+            for (let i = 1; i <= BOARD_SIZE; i++) {
+                let index = (startIndex + (i * dir) + BOARD_SIZE) % BOARD_SIZE;
+                let x,y,z;
+                if (axis === 'x') { x = index; y = coords.y; z = coords.z; }
+                else if (axis === 'y') { y = index; x = coords.x; z = coords.z; }
+                else { z = index; x = coords.x; y = coords.y; }
+                if (board[z][y][x] === 0) return index;
+            }
+            return -1;
+        }
+
+        function updatePreviewPiecePosition(){
+            if(!selectedRowInfo||previewIndex===-1){if(previewPiece)previewPiece.visible=false;return;};
+            const { axis, ...coords } = selectedRowInfo;
+            let x, y, z;
+            if (axis === 'x') { x = previewIndex; y = coords.y; z = coords.z; }
+            else if (axis === 'y') { y = previewIndex; x = coords.x; z = coords.z; }
+            else { z = previewIndex; x = coords.x; y = coords.y; }
+            const key = `${x}-${y}-${z}`;
+            previewPiece.position.copy(pieceGroups[key].position);
+            previewPiece.visible = true;
+        }
+
+        function isCellInSelectedRow(x,y,z){
+            if(!selectedRowInfo) return false;
+            const { axis, ...coords } = selectedRowInfo;
+            if(axis === 'x') return y === coords.y && z === coords.z;
+            if(axis === 'y') return x === coords.x && z === coords.z;
+            if(axis === 'z') return x === coords.x && y === coords.y;
+            return false;
+        }
+
+        init3D();
+
+        function toggleMusic() {
+            if (music.paused) {
+                music.play().then(() => {musicToggleButton.textContent = '♫';musicToggleButton.style.opacity = '1.0';}).catch(e => console.log("Audio play failed. User interaction needed."));
+            } else {music.pause();musicToggleButton.textContent = '🔇';musicToggleButton.style.opacity = '0.5';}
+        }
+        
+        music.play().then(() => {musicToggleButton.textContent = '♫';musicToggleButton.style.opacity = '1.0';}).catch(error => {console.log("Autoplay was prevented.");});
+
+        startGameButton.addEventListener('click', () => {
+            difficulty = difficultySelector.value;
+            seriesLength = parseInt(seriesSelector.value);
+            gameSetupDiv.style.display = 'none';
+            nextRoundButton.style.display = 'none';
+            playerWins = 0;aiWins = 0;
+            updateScores();
+            initializeBoard();
+        });
+
+        nextRoundButton.addEventListener('click', () => {nextRoundButton.style.display = 'none';initializeBoard();});
+        resetButton.addEventListener('click', () => {gameSetupDiv.style.display = 'block';nextRoundButton.style.display = 'none';updateStatus("Choose new game settings.");});
+        confirmMoveButton.addEventListener('click', finalizePlayerMove);
+        cancelMoveButton.addEventListener('click', resetTurnState);
+        
+        document.getElementById('gameCanvas').addEventListener('pointermove',handleHover);
+        document.getElementById('gameCanvas').addEventListener('click',handleClick);
+        document.getElementById('gameCanvas').addEventListener('contextmenu',handleRightClick);
+        window.addEventListener('keydown',handleKeyDown);
+        window.addEventListener('resize',onWindowResize);
+        musicToggleButton.addEventListener('click', toggleMusic);
+    </script>
+</body>
+</html>
