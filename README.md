@@ -1,9 +1,7 @@
 # QUBE - A Connect4 in 3D Game
 QUBE is a modern, browser-based reimagining of the classic connect-four game, set in a zero-gravity 3D environment. Challenge a sophisticated AI opponent and be the first to align four pieces in a row in any dimension. With its sleek, neon-cyberpunk aesthetic and intuitive 3D controls, QUBE offers a unique strategic challenge.
 
-<div align="center">
-  <a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/tin2tin/QUBE_Connect4_in_3D/master/index.html">PLAY</a><br><br>
-</div>
+[![](https://img.shields.io/badge/play%20on-itch.io-ff5e5e?style=for-the-badge&logo=itchdotio)](https://tintwotin.itch.io/think-hard-connect-four-in-3d)
 
 https://github.com/user-attachments/assets/77b0f991-8285-4523-8683-bd9b86a430fa
 
