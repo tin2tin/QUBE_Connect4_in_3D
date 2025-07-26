@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>QUBE - 1988 Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --glow-cyan: #00ffff;
+            --glow-gold: #f0b43c;
+            --dark-teal: #081c24;
+        }
+
+        body, html {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: #fff;
+            font-family: 'VT323', monospace;
+            height: 100%;
+            width: 100%;
+            -webkit-tap-highlight-color: transparent; /* Disable tap highlight on mobile */
+        }
+
+        /* 80's CRT Scanline Effect */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 1000;
+            pointer-events: none;
+            background-size: 100% 4px, 6px 100%;
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.4; }
+            20% { opacity: 0.8; }
+            40% { opacity: 0.5; }
+            60% { opacity: 1; }
+            80% { opacity: 0.4; }
+            100% { opacity: 0.9; }
+        }
+
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .hud {
+            position: fixed;
+            z-index: 10;
+            color: var(--glow-cyan);
+            text-shadow: 0 0 10px var(--glow-cyan), 0 0 20px var(--glow-cyan);
+            pointer-events: none;
+            letter-spacing: 2px;
+        }
+
+        #status {
+            bottom: 15px; /* MOVED TO BOTTOM */
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.4em; /* RESIZED */
+            text-align: center;
+            width: 90%;
+        }
+
+        #scoreDisplay {
+            top: 25px;
+            left: 20px;
+            font-size: 1.8em;
+        }
+        
+        #playerScoreName {
+            color: var(--glow-gold);
+            text-shadow: 0 0 10px var(--glow-gold), 0 0 20px var(--glow-gold);
+        }
+
+        .hud-button {
+            z-index: 20;
+            background: transparent;
+            border: 2px solid var(--glow-cyan);
+            color: var(--glow-cyan);
+            font-size: 24px;
+            width: 44px;
+            height: 44px;
+            line-height: 40px;
+            text-align: center;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-shadow: 0 0 8px var(--glow-cyan);
+            box-shadow: inset 0 0 8px 0 rgba(0, 255, 255, 0.5), 0 0 8px 0 rgba(0, 255, 255, 0.5);
+            pointer-events: all; 
+        }
+
+        #resetButton {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+        }
+
+        #musicToggleButton {
+            position: fixed;
+            top: 15px;
+            right: 75px;
+        }
+
+        #resetButton:hover, #musicToggleButton:hover, #nextRoundButton:hover, .turn-button:hover {
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: inset 0 0 15px 0 var(--glow-cyan), 0 0 15px 0 var(--glow-cyan);
+        }
+        
+        #nextRoundButton {
+            position: fixed;
+            top: 30px; 
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            background: transparent;
+            border: 2px solid var(--glow-cyan);
+            color: var(--glow-cyan);
+            padding: 10px 30px;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: none;
+            box-shadow: inset 0 0 8px 0 rgba(0, 255, 255, 0.5), 0 0 8px 0 rgba(0, 255, 255, 0.5);
+            letter-spacing: 2px;
+            pointer-events: all;
+        }
+
+        #gameSetup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 40px;
+            border: 2px solid var(--glow-cyan);
+            box-shadow: 0 0 30px var(--glow-cyan);
+            text-align: center;
+        }
+
+        #gameSetup h2 {
+            margin-top: 0;
+            font-size: 2.5em;
+            color: var(--glow-cyan);
+            text-shadow: 0 0 10px var(--glow-cyan);
+        }
+        
+        #gameSetup .setup-row { margin: 15px 0; }
+        #gameSetup label { font-size: 1.2em; margin-right: 10px; }
+
+        #gameSetup select, #gameSetup button {
+            background: #001111;
+            border: 2px solid var(--glow-cyan);
+            color: var(--glow-cyan);
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'VT323', monospace;
+            box-shadow: inset 0 0 8px 0 rgba(0, 255, 255, 0.5);
+        }
+
+        #gameSetup select option { background: #000; color: var(--glow-cyan); }
+        #gameSetup button:hover { background: rgba(0, 255, 255, 0.2); box-shadow: inset 0 0 15px 0 var(--glow-cyan), 0 0 15px 0 var(--glow-cyan); }
+
+        #turnControls {
+            position: fixed;
+            bottom: 60px; /* MOVED UP to avoid status text */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: none; /* Changed to flex in JS */
+            align-items: center;
+            gap: 15px;
+            pointer-events: all;
+        }
+
+        .turn-button {
+            background: transparent;
+            border: 2px solid var(--glow-cyan);
+            color: var(--glow-cyan);
+            font-size: 1.2em;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-shadow: 0 0 8px var(--glow-cyan);
+            box-shadow: inset 0 0 8px 0 rgba(0, 255, 255, 0.5), 0 0 8px 0 rgba(0, 255, 255, 0.5);
+        }
+        
+        /* Mobile Landscape Adjustments */
+        @media (max-width: 900px) and (orientation: landscape) {
+            #status {
+                font-size: 1.2em;
+                bottom: 10px;
+            }
+            #scoreDisplay {
+                font-size: 1.2em;
+                top: 20px;
+                left: 15px;
+            }
+            #nextRoundButton {
+                top: 25px;
+                padding: 5px 15px;
+                font-size: 1.2em;
+            }
+            #turnControls {
+                bottom: 45px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameSetup">
+        <h2>QUBE SETUP</h2>
+        <div class="setup-row">
+            <label for="gameModeSelector">Game Mode:</label>
+            <select id="gameModeSelector">
+                <option value="tournament">Tournament</option>
+                <option value="custom">Custom Game</option>
+            </select>
+        </div>
+        <div id="customGameSettings">
+            <div class="setup-row">
+                <label for="difficultySelector">Difficulty:</label>
+                <select id="difficultySelector">
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                    <option value="very_hard">Very Hard</option>
+                </select>
+            </div>
+            <div class="setup-row">
+                <label for="seriesSelector">Series:</label>
+                <select id="seriesSelector">
+                    <option value="3">Best of 3</option>
+                    <option value="5">Best of 5</option>
+                </select>
+            </div>
+        </div>
+        <button id="startGameButton">Start Game</button>
+    </div>
+    <div id="scoreDisplay" class="hud"><span id="playerScoreName">Player</span>: <span id="playerScore">0</span>    AI: <span id="aiScore">0</span></div>
+    <div id="turnControls">
+        <button id="togglePositionButton" class="turn-button">Toggle</button>
+        <button id="confirmMoveButton" class="turn-button">Confirm</button>
+        <button id="cancelMoveButton" class="turn-button">Cancel</button>
+    </div>
+    <button id="musicToggleButton" class="hud-button">🔇</button>
+    <button id="resetButton" class="hud-button">⟳</button>
+    <button id="nextRoundButton">Next Round</button>
+    <canvas id="gameCanvas"></canvas>
+    <div id="status" class="hud">Loading...</div>
+    <audio id="gameMusic" src="audio/Void.mp3" loop></audio>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // --- Config ---
+        const PALETTE = { CYAN: 0x00ffff, GOLD: 0xf0b43c, DARK_TEAL: 0x081c24, LIGHT_BLUE: 0xADD8E6 };
+        const PIECE_SIZE = 1.35;
+        const PIECE_SPACING = 0.05;
+        const BOARD_SIZE = 4;
+        const TOURNAMENT_DIFFICULTIES = ['easy', 'medium', 'hard', 'very_hard'];
+        const TOURNAMENT_SERIES_WIN_SCORE = 2;
+        const TOURNAMENT_WIN_SCORE = 3;
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+        // --- State ---
+        let board = [], currentPlayer = 1, gameOver = false;
+        let gameState = 'SELECT_ROW', selectedRowInfo = null, previewIndex = -1;
+        let scene, camera, renderer, controls, boardGroup, winningLineMesh, gridCube;
+        let pieceGroups = {}, cellMeshes = {}, previewPiece, starfield;
+        let player1Material, player2Material, player1PreviewMaterial, hoverMaterial;
+        let player1Geometry, player2Geometry;
+        let activeAnimations = [], particleSystems = [];
+        let playerWins = 0, aiWins = 0;
+        let roundPlayerWins = 0, roundAiWins = 0;
+        let gameMode = 'tournament', difficulty = 'easy', seriesLength = 3, tournamentRound = 0;
+        let composer;
+
+        // --- DOM Elements ---
+        const playerScoreElem = document.getElementById('playerScore');
+        const aiScoreElem = document.getElementById('aiScore');
+        const statusElem = document.getElementById('status');
+        const music = document.getElementById('gameMusic');
+        const musicToggleButton = document.getElementById('musicToggleButton');
+        const gameSetupDiv = document.getElementById('gameSetup');
+        const startGameButton = document.getElementById('startGameButton');
+        const gameModeSelector = document.getElementById('gameModeSelector');
+        const customGameSettings = document.getElementById('customGameSettings');
+        const difficultySelector = document.getElementById('difficultySelector');
+        const seriesSelector = document.getElementById('seriesSelector');
+        const resetButton = document.getElementById('resetButton');
+        const nextRoundButton = document.getElementById('nextRoundButton');
+        const turnControls = document.getElementById('turnControls');
+        const togglePositionButton = document.getElementById('togglePositionButton');
+        const canvas = document.getElementById('gameCanvas');
+
+        // --- Core Game Logic ---
+        function initializeBoard(){board=Array(BOARD_SIZE).fill(0).map(()=>Array(BOARD_SIZE).fill(0).map(()=>Array(BOARD_SIZE).fill(0)));Object.values(pieceGroups).forEach(g=>{g.visible=false;g.scale.set(1,1,1);});if(winningLineMesh){scene.remove(winningLineMesh);winningLineMesh.geometry.dispose();winningLineMesh.material.dispose();winningLineMesh=null;}activeAnimations=[];currentPlayer=1;gameOver=false;resetTurnState();}
+        function placePiece(x,y,z,p){if(gameOver||z<0||board[z][y][x]!==0)return false;board[z][y][x]=p;return true;}
+        function checkLine(x,y,z,dx,dy,dz,p){const line=[];for(let i=0;i<4;i++){const cX=x+i*dx,cY=y+i*dy,cZ=z+i*dz;if(cX<0||cX>=4||cY<0||cY>=4||cZ<0||cZ>=4||board[cZ][cY][cX]!==p)return null;line.push({x:cX,y:cY,z:cZ});}return line;}
+        function checkWin(p){const D=[[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,-1,0],[1,0,1],[1,0,-1],[0,1,1],[0,1,-1],[1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1]];for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)for(const d of D){const line=checkLine(x,y,z,d[0],d[1],d[2],p);if(line)return line;}return null;}
+        function checkDraw(){return board.every(p=>p.every(r=>r.every(c=>c!==0)));}
+        function findWinningMove(player){for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++){if(board[z][y][x]===0){board[z][y][x]=player;if(checkWin(player)){board[z][y][x]=0;return{x,y,z};}board[z][y][x]=0;}}return null;}
+        function countCreatedThreats(move,player,count){let threats=0;const D=[[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,-1,0],[1,0,1],[1,0,-1],[0,1,1],[0,1,-1],[1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1]];for(const d of D){for(let i=0;i<4;i++){const sx=move.x-i*d[0],sy=move.y-i*d[1],sz=move.z-i*d[2];const ex=sx+3*d[0],ey=sy+3*d[1],ez=sz+3*d[2];if(sx<0||sy<0||sz<0||sx>3||sy>3||sz>3||ex<0||ey<0||ez<0||ex>3||ey>3||ez>3)continue;let pCount=0,eCount=0;for(let j=0;j<4;j++){const val=board[sz+j*d[2]][sy+j*d[1]][sx+j*d[0]];if(val===player)pCount++;else if(val===0)eCount++;}if(pCount===count&&eCount===4-count){threats++;break;}}}return threats;}
+        function findFork(player){const available=[];for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)if(board[z][y][x]===0)available.push({x,y,z});for(const move of available){board[move.z][move.y][move.x]=player;if(countCreatedThreats(move,player,3)>=2){board[move.z][move.y][move.x]=0;return move;}board[move.z][move.y][move.x]=0;}return null;}
+        function findBestMove(){let move=findWinningMove(2);if(move)return move;move=findWinningMove(1);if(move)return move;if(difficulty==='very_hard'){move=findFork(2);if(move)return move;move=findFork(1);if(move)return move;}if(difficulty==='hard'||difficulty==='very_hard'){let goodMoves=[];for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)if(board[z][y][x]===0){board[z][y][x]=2;if(countCreatedThreats({x,y,z},2,2)>0)goodMoves.push({x,y,z});board[z][y][x]=0;}if(goodMoves.length>0)return goodMoves[Math.floor(Math.random()*goodMoves.length)];let centerMoves=[];for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)if(board[z][y][x]===0){if((x>0&&x<3)&&(y>0&&y<3)&&(z>0&&z<3))centerMoves.push({x,y,z});}if(centerMoves.length>0)return centerMoves[Math.floor(Math.random()*centerMoves.length)];}if(difficulty==='medium'){for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)if(board[z][y][x]===0){board[z][y][x]=2;if(countCreatedThreats({x,y,z},2,2)>0){board[z][y][x]=0;return{x,y,z};}board[z][y][x]=0;}}const a=[];for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++)if(board[z][y][x]===0)a.push({x,y,z});return a.length>0?a[Math.floor(Math.random()*a.length)]:null;}
+        function aiTurn(){const m=findBestMove();if(!m){currentPlayer=1;return;}placePieceAndAnimate(m.x,m.y,m.z,2);const wL=checkWin(2);if(wL){handleRoundEnd(false,"AI (Cyan) wins the match!", wL);return;}if(checkDraw()){handleRoundEnd(true,"Match is a Draw!", null);return;}currentPlayer=1;updateStatus();}
+        function handleRoundEnd(isDraw,message,winningLine){gameOver=true;if(isDraw){roundPlayerWins++;roundAiWins++;}else{if(currentPlayer===1)roundPlayerWins++;else roundAiWins++;}updateStatus(message);if(winningLine)startWinAnimation(winningLine);updateScores();}
+        function updateStatus(message=""){let turnMessage="";if(!gameOver){turnMessage=(currentPlayer===1)?"Your Turn":"AI is Thinking...";}let mainMessage=message;if(!mainMessage){if(gameMode==='tournament'){const diffUpper=difficulty.toUpperCase();mainMessage=`TOURNAMENT (${playerWins}-${aiWins}) | ROUND: ${diffUpper} (${roundPlayerWins}-${roundAiWins}) | ${turnMessage}`;}else{mainMessage=`Best of ${seriesLength} (${roundPlayerWins}-${roundAiWins}) | ${turnMessage}`;}}statusElem.innerHTML=mainMessage;}
+        function updateScores(){playerScoreElem.textContent=(gameMode==='tournament'?playerWins:roundPlayerWins);aiScoreElem.textContent=(gameMode==='tournament'?aiWins:roundAiWins);if(!gameOver)return;const seriesWinTarget=(gameMode==='tournament')?TOURNAMENT_SERIES_WIN_SCORE:Math.ceil(seriesLength/2);let seriesOver=false;let isDrawRound=checkDraw();if(roundPlayerWins>=seriesWinTarget){if(gameMode==='tournament')playerWins++;seriesOver=true;updateStatus(`You won the ${difficulty.toUpperCase()} series!`);}else if(roundAiWins>=seriesWinTarget){if(gameMode==='tournament')aiWins++;seriesOver=true;updateStatus(`AI won the ${difficulty.toUpperCase()} series.`);}if(seriesOver||isDrawRound){if(gameMode==='tournament'){if(playerWins>=TOURNAMENT_WIN_SCORE){updateStatus("YOU WIN THE TOURNAMENT!");gameSetupDiv.style.display='block';}else if(aiWins>=TOURNAMENT_WIN_SCORE){updateStatus("AI WINS THE TOURNAMENT!");gameSetupDiv.style.display='block';}else if(tournamentRound>=TOURNAMENT_DIFFICULTIES.length-1&&seriesOver){if(playerWins>aiWins)updateStatus("YOU WIN THE TOURNAMENT!");else if(aiWins>playerWins)updateStatus("AI WINS THE TOURNAMENT!");else updateStatus("TOURNAMENT ENDS IN A DRAW!");gameSetupDiv.style.display='block';}else{nextRoundButton.style.display='block';}}else{if(seriesOver)gameSetupDiv.style.display='block';else nextRoundButton.style.display='block';}}else{nextRoundButton.style.display='block';}}
+        
+        // --- Visuals & 3D Scene ---
+        function createStarfield(){const vertices=[];for(let i=0;i<3000;i++){const x=THREE.MathUtils.randFloatSpread(100);const y=THREE.MathUtils.randFloatSpread(100);const z=THREE.MathUtils.randFloatSpread(100);vertices.push(x,y,z);}const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));const material=new THREE.PointsMaterial({color:PALETTE.LIGHT_BLUE,size:0.1,transparent:true,opacity:0.5});starfield=new THREE.Points(geometry,material);scene.add(starfield);}
+        function createGridCube(){const totalSize=BOARD_SIZE*PIECE_SIZE+(BOARD_SIZE-1)*PIECE_SPACING;const halfSize=totalSize/2;const step=PIECE_SIZE+PIECE_SPACING;const points=[];for(let i=0;i<=BOARD_SIZE;i++){const pos=i*step-halfSize-PIECE_SPACING/2;points.push(new THREE.Vector3(-halfSize,pos,-halfSize),new THREE.Vector3(halfSize,pos,-halfSize));points.push(new THREE.Vector3(pos,-halfSize,-halfSize),new THREE.Vector3(pos,halfSize,-halfSize));points.push(new THREE.Vector3(-halfSize,pos,halfSize),new THREE.Vector3(halfSize,pos,halfSize));points.push(new THREE.Vector3(pos,-halfSize,halfSize),new THREE.Vector3(pos,halfSize,halfSize));points.push(new THREE.Vector3(-halfSize,-halfSize,pos),new THREE.Vector3(halfSize,-halfSize,pos));points.push(new THREE.Vector3(-halfSize,halfSize,pos),new THREE.Vector3(halfSize,halfSize,pos));points.push(new THREE.Vector3(-halfSize,pos,-halfSize),new THREE.Vector3(-halfSize,pos,halfSize));points.push(new THREE.Vector3(halfSize,pos,-halfSize),new THREE.Vector3(halfSize,pos,halfSize));points.push(new THREE.Vector3(pos,-halfSize,-halfSize),new THREE.Vector3(pos,-halfSize,halfSize));points.push(new THREE.Vector3(pos,halfSize,-halfSize),new THREE.Vector3(pos,halfSize,halfSize));}const geometry=new THREE.BufferGeometry().setFromPoints(points);const material=new THREE.LineBasicMaterial({color:PALETTE.CYAN,transparent:true,opacity:0.2,blending:THREE.AdditiveBlending,depthWrite:false});gridCube=new THREE.LineSegments(geometry,material);boardGroup.add(gridCube);}
+        function createParticleBurst(position,color){const count=100;const geometry=new THREE.BufferGeometry();const positions=new Float32Array(count*3);const velocities=[];for(let i=0;i<count;i++){positions[i*3]=position.x;positions[i*3+1]=position.y;positions[i*3+2]=position.z;const vel=new THREE.Vector3((Math.random()-0.5),(Math.random()-0.5),(Math.random()-0.5)).normalize().multiplyScalar(Math.random()*0.2);velocities.push(vel);}geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));const material=new THREE.PointsMaterial({color:color,size:0.1,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false,});const points=new THREE.Points(geometry,material);scene.add(points);particleSystems.push({points,velocities,life:1.0});}
+        function init3D(){scene=new THREE.Scene();scene.background=new THREE.Color(PALETTE.DARK_TEAL);scene.fog=new THREE.FogExp2(PALETTE.DARK_TEAL,0.035);camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});onWindowResize();controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=6;controls.maxDistance=25;camera.position.set(4,5,controls.minDistance+1);const renderPass=new RenderPass(scene,camera);const bloomPass=new UnrealBloomPass(new THREE.Vector2(window.innerWidth,window.innerHeight),1.0,0.1,0.1);composer=new EffectComposer(renderer);composer.addPass(renderPass);composer.addPass(bloomPass);const emissiveIntensity=1.2;player1Material=new THREE.MeshStandardMaterial({color:PALETTE.GOLD,emissive:PALETTE.GOLD,emissiveIntensity:emissiveIntensity,metalness:0.1,roughness:0.4});player2Material=new THREE.MeshStandardMaterial({color:PALETTE.CYAN,emissive:PALETTE.CYAN,emissiveIntensity:emissiveIntensity,metalness:0.1,roughness:0.4});player1PreviewMaterial=new THREE.MeshStandardMaterial({color:PALETTE.GOLD,emissive:PALETTE.GOLD,emissiveIntensity:emissiveIntensity*1.15,toneMapped:false,metalness:0.1,roughness:0.4});hoverMaterial=new THREE.MeshStandardMaterial({color:PALETTE.CYAN,emissive:PALETTE.CYAN,emissiveIntensity:0.8,transparent:true,opacity:0.2});const rG=new THREE.TorusGeometry(PIECE_SIZE*0.35,PIECE_SIZE*0.1,16,32);const r1=new THREE.Mesh(rG);const r2=new THREE.Mesh(rG);r2.rotation.y=Math.PI/2;player1Geometry=new THREE.Group();player1Geometry.add(r1,r2);const bG=new THREE.BoxGeometry(PIECE_SIZE*0.8,PIECE_SIZE*0.18,PIECE_SIZE*0.18);const c1=new THREE.Mesh(bG);const c2=new THREE.Mesh(bG);const c3=new THREE.Mesh(bG);c2.rotation.z=Math.PI/2;c3.rotation.y=Math.PI/2;player2Geometry=new THREE.Group();player2Geometry.add(c1,c2,c3);boardGroup=new THREE.Group();scene.add(boardGroup);const offset=(BOARD_SIZE*PIECE_SIZE+(BOARD_SIZE-1)*PIECE_SPACING)/2-PIECE_SIZE/2;for(let z=0;z<4;z++)for(let y=0;y<4;y++)for(let x=0;x<4;x++){const pos={x:x*(PIECE_SIZE+PIECE_SPACING)-offset,y:y*(PIECE_SIZE+PIECE_SPACING)-offset,z:z*(PIECE_SIZE+PIECE_SPACING)-offset};const key=`${x}-${y}-${z}`;const cM=new THREE.Mesh(new THREE.BoxGeometry(PIECE_SIZE,PIECE_SIZE,PIECE_SIZE),hoverMaterial.clone());cM.position.set(pos.x,pos.y,pos.z);cM.userData={x,y,z};cM.visible=false;boardGroup.add(cM);cellMeshes[key]=cM;const p1=player1Geometry.clone();p1.children.forEach(c=>c.material=player1Material);const p2=player2Geometry.clone();p2.children.forEach(c=>c.material=player2Material);const pG=new THREE.Group();pG.add(p1,p2);pG.position.set(pos.x,pos.y,pos.z);pG.visible=false;boardGroup.add(pG);pieceGroups[key]=pG;}previewPiece=player1Geometry.clone();previewPiece.children.forEach(c=>c.material=player1PreviewMaterial);previewPiece.visible=false;scene.add(previewPiece);createGridCube();createStarfield();animate();}
+        function animate(time){requestAnimationFrame(animate);if(starfield)starfield.rotation.y=time*0.0001;if(gridCube)gridCube.material.opacity=Math.sin(time*0.005)*0.1+0.15;for(let i=particleSystems.length-1;i>=0;i--){const system=particleSystems[i];const positions=system.points.geometry.attributes.position;for(let j=0;j<positions.count;j++){positions.setX(j,positions.getX(j)+system.velocities[j].x);positions.setY(j,positions.getY(j)+system.velocities[j].y);positions.setZ(j,positions.getZ(j)+system.velocities[j].z);}positions.needsUpdate=true;system.life-=0.02;system.points.material.opacity=system.life;if(system.life<=0){scene.remove(system.points);system.points.geometry.dispose();system.points.material.dispose();particleSystems.splice(i,1);}}for(let i=activeAnimations.length-1;i>=0;i--){const anim=activeAnimations[i];if(anim.type==='scale'){anim.progress=Math.min(1,anim.progress+0.05);const s=0.1+(0.9*anim.progress);anim.mesh.scale.set(s,s,s);if(anim.progress>=1)activeAnimations.splice(i,1);}else if(anim.type==='linePulse'){anim.material.emissiveIntensity=Math.sin(time*0.01)*0.8+1.2;}}controls.update();composer.render();}
+        function createWinningLine(line){if(!line)return null;const player=board[line[0].z][line[0].y][line[0].x];const startPos=pieceGroups[`${line[0].x}-${line[0].y}-${line[0].z}`].position;const endPos=pieceGroups[`${line[3].x}-${line[3].y}-${line[3].z}`].position;const distance=startPos.distanceTo(endPos);const lineGeo=new THREE.CylinderGeometry(0.15,0.15,distance,8);const color=player===1?PALETTE.GOLD:PALETTE.CYAN;const lineMat=new THREE.MeshStandardMaterial({color:color,emissive:color,emissiveIntensity:1,toneMapped:false});winningLineMesh=new THREE.Mesh(lineGeo,lineMat);winningLineMesh.position.copy(startPos).add(endPos).multiplyScalar(0.5);const up=new THREE.Vector3(0,1,0);const direction=new THREE.Vector3().subVectors(endPos,startPos).normalize();const quaternion=new THREE.Quaternion().setFromUnitVectors(up,direction);winningLineMesh.quaternion.copy(quaternion);scene.add(winningLineMesh);return lineMat;}
+        function startPlacementAnimation(mesh){mesh.scale.set(0.1,0.1,0.1);activeAnimations.push({mesh,type:'scale',progress:0});}
+        function startWinAnimation(wL){const lineMaterial=createWinningLine(wL);if(lineMaterial)activeAnimations.push({material:lineMaterial,type:'linePulse'});}
+        function placePieceAndAnimate(x,y,z,p){if(placePiece(x,y,z,p)){const pG=pieceGroups[`${x}-${y}-${z}`];pG.visible=true;pG.children[0].visible=(p===1);pG.children[1].visible=(p===2);startPlacementAnimation(pG);createParticleBurst(pG.position,p===1?PALETTE.GOLD:PALETTE.CYAN);}}
+        function onWindowResize(){const width=window.innerWidth;const height=window.innerHeight;renderer.setSize(width,height);if(composer)composer.setSize(width,height);camera.aspect=width/height;camera.updateProjectionMatrix();}
+        function getIntersect(event){const rect=canvas.getBoundingClientRect();const mNDC={x:((event.clientX-rect.left)/rect.width)*2-1,y:-((event.clientY-rect.top)/rect.height)*2+1};const r=new THREE.Raycaster();r.setFromCamera(mNDC,camera);const i=r.intersectObjects(Object.values(cellMeshes),false);return i.length>0?i[0]:null;}
+        function handleHover(event){if(event.pointerType!=='mouse'||gameState!=='SELECT_ROW'||gameOver)return;Object.values(cellMeshes).forEach(c=>c.visible=false);const intersect=getIntersect(event);if(intersect){const normal=intersect.face.normal;const pos=intersect.object.userData;let axis;if(Math.abs(normal.x)>0.5)axis='x';else if(Math.abs(normal.y)>0.5)axis='y';else axis='z';for(let i=0;i<BOARD_SIZE;i++){let x=(axis==='x')?i:pos.x;let y=(axis==='y')?i:pos.y;let z=(axis==='z')?i:pos.z;if(board[z][y][x]===0)cellMeshes[`${x}-${y}-${z}`].visible=true;}}}
+        function handlePointerDown(event){if(gameOver||currentPlayer!==1)return;const intersect=getIntersect(event);if(!intersect)return;const normal=intersect.face.normal;const pos=intersect.object.userData;if(gameState==='SELECT_ROW'){enterChoosePositionState(normal,pos);}else if(gameState==='CHOOSE_POSITION'){if(isCellInSelectedRow(pos.x,pos.y,pos.z)&&board[pos.z][pos.y][pos.x]===0){previewIndex=(selectedRowInfo.axis==='x'?pos.x:selectedRowInfo.axis==='y'?pos.y:pos.z);updatePreviewPiecePosition();}else{enterChoosePositionState(normal,pos);}}}
+        function enterChoosePositionState(normal,pos){let axis;if(Math.abs(normal.x)>0.5)axis='x';else if(Math.abs(normal.y)>0.5)axis='y';else axis='z';if(axis==='x')selectedRowInfo={axis:'x',y:pos.y,z:pos.z};else if(axis==='y')selectedRowInfo={axis:'y',x:pos.x,z:pos.z};else selectedRowInfo={axis:'z',x:pos.x,y:pos.y};previewIndex=findNextAvailableInRow(-1,true);if(previewIndex!==-1){gameState='CHOOSE_POSITION';updatePreviewPiecePosition();statusElem.innerHTML=isTouchDevice?"Tap to move or use the buttons below.":"Click, use SPACE, or the Toggle button to move.";turnControls.style.display='flex';Object.values(cellMeshes).forEach(c=>c.visible=false);for(let i=0;i<BOARD_SIZE;i++){let x=(axis==='x')?i:pos.x;let y=(axis==='y')?i:pos.y;let z=(axis==='z')?i:pos.z;if(board[z][y][x]===0)cellMeshes[`${x}-${y}-${z}`].visible=true;}}}
+        function handleToggle(){if(gameOver||currentPlayer!==1||gameState!=='CHOOSE_POSITION')return;previewIndex=findNextAvailableInRow(previewIndex,true);updatePreviewPiecePosition();}
+        function handleKeyDown(event){if(gameOver||currentPlayer!==1||gameState!=='CHOOSE_POSITION')return;if(event.code==='Space'){event.preventDefault();handleToggle();}else if(event.code==='Enter'){event.preventDefault();document.getElementById('confirmMoveButton').click();}else if(event.code==='Escape'){event.preventDefault();document.getElementById('cancelMoveButton').click();}}
+        function finalizePlayerMove(){if(!selectedRowInfo)return;const{axis,...coords}=selectedRowInfo;let x,y,z;if(axis==='x'){x=previewIndex;y=coords.y;z=coords.z;}else if(axis==='y'){y=previewIndex;x=coords.x;z=coords.z;}else{z=previewIndex;x=coords.x;y=coords.y;}placePieceAndAnimate(x,y,z,1);resetTurnState();const wL=checkWin(1);if(wL){handleRoundEnd(false,"You win the match!",wL);return;}if(checkDraw()){handleRoundEnd(true,"Match is a Draw!",null);return;}currentPlayer=2;updateStatus();setTimeout(aiTurn,500);}
+        function resetTurnState(){gameState='SELECT_ROW';if(previewPiece)previewPiece.visible=false;Object.values(cellMeshes).forEach(c=>c.visible=false);selectedRowInfo=null;previewIndex=-1;turnControls.style.display='none';if(!gameOver)updateStatus();}
+        function findNextAvailableInRow(startIndex,forward){if(!selectedRowInfo)return-1;const{axis,...coords}=selectedRowInfo;const dir=forward?1:-1;for(let i=1;i<=BOARD_SIZE;i++){let index=(startIndex+(i*dir)+BOARD_SIZE)%BOARD_SIZE;let x,y,z;if(axis==='x'){x=index;y=coords.y;z=coords.z;}else if(axis==='y'){y=index;x=coords.x;z=coords.z;}else{z=index;x=coords.x;y=coords.y;}if(board[z][y][x]===0)return index;}return-1;}
+        function updatePreviewPiecePosition(){if(!selectedRowInfo||previewIndex===-1){if(previewPiece)previewPiece.visible=false;return;};const{axis,...coords}=selectedRowInfo;let x,y,z;if(axis==='x'){x=previewIndex;y=coords.y;z=coords.z;}else if(axis==='y'){y=previewIndex;x=coords.x;z=coords.z;}else{z=previewIndex;x=coords.x;y=coords.y;}const key=`${x}-${y}-${z}`;previewPiece.position.copy(pieceGroups[key].position);previewPiece.visible=true;}
+        function isCellInSelectedRow(x,y,z){if(!selectedRowInfo)return false;const{axis,...coords}=selectedRowInfo;if(axis==='x')return y===coords.y&&z===coords.z;if(axis==='y')return x===coords.x&&z===coords.z;if(axis==='z')return x===coords.x&&y===coords.y;return false;}
+        function toggleMusic(){if(music.paused){music.play().then(()=>{musicToggleButton.textContent='♫';musicToggleButton.style.opacity='1.0';}).catch(e=>{});}else{music.pause();musicToggleButton.textContent='🔇';musicToggleButton.style.opacity='0.5';}}
+        
+        init3D();
+        
+        // --- Event Listeners ---
+        gameModeSelector.addEventListener('change',(e)=>{customGameSettings.style.display=e.target.value==='custom'?'block':'none';});
+        startGameButton.addEventListener('click',()=>{gameMode=gameModeSelector.value;playerWins=0;aiWins=0;roundPlayerWins=0;roundAiWins=0;if(gameMode==='tournament'){tournamentRound=0;difficulty=TOURNAMENT_DIFFICULTIES[tournamentRound];}else{difficulty=difficultySelector.value;seriesLength=parseInt(seriesSelector.value);}gameSetupDiv.style.display='none';nextRoundButton.style.display='none';if(music.paused)toggleMusic();updateScores();initializeBoard();});
+        nextRoundButton.addEventListener('click',()=>{nextRoundButton.style.display='none';const seriesWinTarget=(gameMode==='tournament')?TOURNAMENT_SERIES_WIN_SCORE:Math.ceil(seriesLength/2);if(roundPlayerWins>=seriesWinTarget||roundAiWins>=seriesWinTarget||checkDraw()){if(gameMode==='tournament'){tournamentRound++;if(tournamentRound<TOURNAMENT_DIFFICULTIES.length){difficulty=TOURNAMENT_DIFFICULTIES[tournamentRound];}}roundPlayerWins=0;roundAiWins=0;}initializeBoard();});
+        resetButton.addEventListener('click',()=>{gameSetupDiv.style.display='block';nextRoundButton.style.display='none';statusElem.innerHTML="Choose new game settings.";});
+        musicToggleButton.addEventListener('click',toggleMusic);
+        togglePositionButton.addEventListener('click',handleToggle);
+        document.getElementById('confirmMoveButton').addEventListener('click',finalizePlayerMove);
+        document.getElementById('cancelMoveButton').addEventListener('click',resetTurnState);
+        canvas.addEventListener('pointermove',handleHover);
+        canvas.addEventListener('pointerdown',handlePointerDown);
+        canvas.addEventListener('contextmenu',event=>event.preventDefault());
+        window.addEventListener('keydown',handleKeyDown);
+        window.addEventListener('resize',onWindowResize);
+        
+        // Initial setup
+        customGameSettings.style.display = 'none';
+        statusElem.innerHTML = "Welcome to QUBE. Open Setup to Start.";
+    </script>
+</body>
+</html>
